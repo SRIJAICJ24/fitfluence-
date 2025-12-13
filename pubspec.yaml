@@ -1,0 +1,47 @@
+name: fitfluence
+description: A social fitness platform connecting gym-goers with compatible workout buddies.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.0
+  
+  # Routing
+  go_router: ^12.1.0
+  
+  # Backend & Auth
+  supabase_flutter: ^2.3.0
+  
+  # UI & Design
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.5.0
+  lottie: ^3.1.0
+  
+  # Utilities
+  intl: ^0.19.0
+  logger: ^2.0.0
+  uuid: ^4.3.0
+  equatable: ^2.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.3.9
+  mocktail: ^1.0.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
