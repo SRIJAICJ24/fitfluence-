@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../profile/presentation/controllers/profile_controller.dart';
 import 'dart:ui';
 import '../../../../config/theme.dart';
 import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dart';
@@ -7,11 +9,14 @@ import '../widgets/flex_rail.dart';
 import '../widgets/quick_connect_rail.dart';
 import '../widgets/active_grid.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileState = ref.watch(profileControllerProvider);
+    final firstName = profileState.value?.firstName ?? 'Athlete';
+
     return Scaffold(
       extendBody: true,
       body: Stack(
@@ -28,7 +33,7 @@ class HomeScreen extends StatelessWidget {
                 // Header
                 SliverPadding(
                   padding: const EdgeInsets.all(24),
-                  sliver: SliverToBoxAdapter(child: _buildHeader(context)),
+                  sliver: SliverToBoxAdapter(child: _buildHeader(context, firstName)),
                 ),
 
                 // Flex Rail (Stories)
@@ -113,7 +118,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String name) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -121,7 +126,7 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Good Morning,', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.slateGrey)),
-            Text('Alex', style: Theme.of(context).textTheme.displayMedium),
+            Text(name, style: Theme.of(context).textTheme.displayMedium),
           ],
         ),
         // Utility Cluster

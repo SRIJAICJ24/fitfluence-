@@ -92,7 +92,7 @@ class _GymSearchScreenState extends State<GymSearchScreen> {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
                                   child: Image.network(
-                                    'https://placehold.co/100x100/1e293b/FFF', 
+                                    'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=200',  
                                     width: 80, height: 80, fit: BoxFit.cover
                                   ),
                                 ),

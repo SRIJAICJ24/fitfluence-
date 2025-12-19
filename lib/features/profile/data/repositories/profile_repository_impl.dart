@@ -15,7 +15,22 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .from('profiles')
           .select()
           .eq('id', userId)
-          .single();
+          .eq('id', userId)
+          .maybeSingle();
+      
+      if (response == null) {
+        // Return a dummy/empty profile if none exists yet, 
+        // effectively handling the 'new user' state gracefully.
+        return ProfileModel(
+          id: userId,
+          email: '',
+          username: 'New User',
+          firstName: 'Guest',
+          lastName: '',
+          isActive: false, 
+          // Default values for required fields
+        );
+      }
       
       return ProfileModel.fromJson(response);
     } catch (e) {
@@ -45,8 +60,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
       await _supabaseClient
           .from('profiles')
-          .update(model.toJson())
-          .eq('id', profile.id);
+          .upsert(model.toJson());
     } catch (e) {
       throw Exception('Failed to update profile: $e');
     }
