@@ -1,22 +1,26 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../domain/entities/gym.dart';
+import '../../domain/models/gym_model.dart';
 import '../../domain/repositories/gym_repository.dart';
-import '../models/gym_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final gymRepositoryProvider = Provider<GymRepository>((ref) {
+  return GymRepositoryImpl(Supabase.instance.client);
+});
 
 class GymRepositoryImpl implements GymRepository {
-  final SupabaseClient _supabaseClient;
+  final SupabaseClient _supabase;
 
-  GymRepositoryImpl(this._supabaseClient);
+  GymRepositoryImpl(this._supabase);
 
   @override
-  Future<List<Gym>> searchGyms(String query) async {
+  Future<List<GymModel>> searchGyms(String query) async {
     try {
-      final response = await _supabaseClient
+      final response = await _supabase
           .from('gyms')
           .select()
-          .ilike('name', '%$query%')
+          .ilike('name', '%$query%') // Case-insensitive partial match
           .limit(20);
-      
+
       return (response as List).map((data) => GymModel.fromJson(data)).toList();
     } catch (e) {
       throw Exception('Failed to search gyms: $e');
@@ -24,36 +28,35 @@ class GymRepositoryImpl implements GymRepository {
   }
 
   @override
-  Future<List<Gym>> getNearbyGyms(double lat, double lon, {double radius = 5000}) async {
-    // Note: This relies on the 'nearby-gyms' Edge Function or PostGIS query
-    // For now, implementing a basic mock or client-side filter if needed, 
-    // but referring to the Edge Function call pattern.
+  Future<GymModel?> getGymById(String id) async {
     try {
-       final response = await _supabaseClient.functions.invoke(
-        'nearby-gyms',
-        body: {'lat': lat, 'lon': lon, 'radius': radius},
-      );
-      
-      final data = response.data as List;
-      return data.map((json) => GymModel.fromJson(json)).toList();
-    } catch (e) {
-      // Fallback or empty list
-      return [];
-    }
-  }
-
-  @override
-  Future<Gym> getGymDetail(String id) async {
-    try {
-      final response = await _supabaseClient
+      final response = await _supabase
           .from('gyms')
           .select()
           .eq('id', id)
           .single();
-      
+
       return GymModel.fromJson(response);
     } catch (e) {
-      throw Exception('Failed to get gym detail: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<List<GymModel>> getNearbyGyms(double lat, double lon, {double radiusKm = 10}) async {
+    // Note: This is an improved query that would ideally use PostGIS if available.
+    // For Phase 1 Standard Postgres, we'll just fetch all active gyms and filter or limit.
+    // In a real app with many gyms, use strict BBox filtering or RPC.
+    try {
+      final response = await _supabase
+          .from('gyms')
+          .select()
+          .eq('is_active', true)
+          .limit(50);
+
+      return (response as List).map((data) => GymModel.fromJson(data)).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch nearby gyms: $e');
     }
   }
 }

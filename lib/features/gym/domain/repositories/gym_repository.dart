@@ -1,7 +1,7 @@
-import '../../domain/entities/gym.dart';
+import '../models/gym_model.dart';
 
 abstract class GymRepository {
-  Future<List<Gym>> searchGyms(String query);
-  Future<List<Gym>> getNearbyGyms(double lat, double lon, {double radius = 5000});
-  Future<Gym> getGymDetail(String id);
+  Future<List<GymModel>> searchGyms(String query);
+  Future<GymModel?> getGymById(String id);
+  Future<List<GymModel>> getNearbyGyms(double lat, double lon, {double radiusKm = 10});
 }

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui';
+import 'dart:async';
 import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dart';
 import '../../../../config/theme.dart';
 import '../controllers/onboarding_controller.dart';
 import '../controllers/onboarding_state.dart';
+import '../../../gym/domain/models/gym_model.dart';
+import '../../../gym/data/repositories/gym_repository_impl.dart';
 
 class VitalityOnboardingScreen extends ConsumerStatefulWidget {
   const VitalityOnboardingScreen({super.key});
@@ -346,13 +349,56 @@ class _StepIdentity extends ConsumerWidget {
 }
 
 // --- STEP 4: Context (Gym) ---
-class _StepContext extends ConsumerWidget {
+class _StepContext extends ConsumerStatefulWidget {
   final VoidCallback onNext;
   const _StepContext({required this.onNext});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StepContext> createState() => _StepContextState();
+}
+
+class _StepContextState extends ConsumerState<_StepContext> {
+  final TextEditingController _searchController = TextEditingController();
+  List<GymModel> _searchResults = [];
+  bool _isLoading = false;
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      if (query.isEmpty) {
+        setState(() => _searchResults = []);
+        return;
+      }
+
+      setState(() => _isLoading = true);
+      try {
+        final results = await ref.read(gymRepositoryProvider).searchGyms(query);
+        if (mounted) {
+          setState(() {
+            _searchResults = results;
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }); 
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
+    
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -362,48 +408,72 @@ class _StepContext extends ConsumerWidget {
            const SizedBox(height: 8),
            const Text('Where do you train?', style: TextStyle(color: AppColors.slateGrey)),
            const SizedBox(height: 24),
+           
            GlassContainer(
              padding: const EdgeInsets.symmetric(horizontal: 16),
-             child: const TextField(
-               decoration: InputDecoration(
+             child: TextField(
+               controller: _searchController,
+               onChanged: _onSearchChanged,
+               decoration: const InputDecoration(
                  icon: Icon(Icons.search, color: AppColors.slateGrey),
-                 hintText: 'Search gyms...',
+                 hintText: 'Search for your gym...',
                  border: InputBorder.none,
                  hintStyle: TextStyle(color: AppColors.slateGrey),
                ),
-               style: TextStyle(color: Colors.white),
+               style: const TextStyle(color: Colors.white),
              ),
            ),
+           
            const SizedBox(height: 16),
+           
            Expanded(
-             child: ListView.separated(
-               itemCount: 4,
-               separatorBuilder: (_,__) => const SizedBox(height: 12),
-               itemBuilder: (context, index) {
-                 final gymName = 'Gold\'s Gym ${index+1}';
-                 final isSelected = state.gymId == gymName;
-                 return GestureDetector(
-                   onTap: () => ref.read(onboardingControllerProvider.notifier).updateField(gymId: gymName),
-                   child: GlassContainer(
-                     padding: const EdgeInsets.all(16),
-                     borderRadius: 12,
-                     backgroundColor: isSelected ? AppColors.volt.withOpacity(0.1) : null,
-                     child: Row(
-                       children: [
-                         const Icon(Icons.store, color: AppColors.lightSlate),
-                         const SizedBox(width: 16),
-                         Expanded(child: Text(gymName, style: const TextStyle(fontWeight: FontWeight.bold))),
-                         if (isSelected) const Icon(Icons.check_circle, color: AppColors.volt),
-                       ],
-                     ),
+             child: _isLoading 
+               ? const Center(child: CircularProgressIndicator(color: AppColors.volt))
+               : _searchResults.isEmpty && _searchController.text.isNotEmpty
+                 ? const Center(child: Text('No gyms found', style: TextStyle(color: AppColors.slateGrey)))
+                 : ListView.separated(
+                     itemCount: _searchResults.length,
+                     separatorBuilder: (_,__) => const SizedBox(height: 12),
+                     itemBuilder: (context, index) {
+                       final gym = _searchResults[index];
+                       final isSelected = state.gymId == gym.id;
+                       
+                       return GestureDetector(
+                         onTap: () => ref.read(onboardingControllerProvider.notifier).updateField(gymId: gym.id),
+                         child: GlassContainer(
+                           padding: const EdgeInsets.all(16),
+                           borderRadius: 12,
+                           backgroundColor: isSelected ? AppColors.volt.withOpacity(0.1) : null,
+                           child: Row(
+                             children: [
+                               const Icon(Icons.fitness_center, color: AppColors.lightSlate), 
+                               const SizedBox(width: 16),
+                               Expanded(
+                                 child: Column(
+                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                   children: [
+                                     Text(gym.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                     if (gym.city.isNotEmpty)
+                                       Text(gym.city, style: const TextStyle(color: AppColors.slateGrey, fontSize: 12)),
+                                   ],
+                                 ),
+                               ),
+                               if (isSelected) const Icon(Icons.check_circle, color: AppColors.volt),
+                             ],
+                           ),
+                         ),
+                       );
+                     },
                    ),
-                 );
-               },
-             ),
            ),
+           
            ElevatedButton(
-             onPressed: onNext,
-             style: ElevatedButton.styleFrom(backgroundColor: AppColors.volt, foregroundColor: AppColors.deepSlate, minimumSize: const Size(double.infinity, 50)),
+             onPressed: state.gymId != null ? widget.onNext : null,
+             style: ElevatedButton.styleFrom(
+               backgroundColor: AppColors.volt, 
+               foregroundColor: AppColors.deepSlate, 
+               minimumSize: const Size(double.infinity, 50)
+             ),
              child: const Text('Next Step'),
            ),
         ],

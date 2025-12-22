@@ -11,6 +11,7 @@ import '../features/profile/presentation/screens/photo_upload_screen.dart';
 import '../features/gym/presentation/screens/gym_search_screen.dart';
 import '../features/gym/presentation/screens/gym_detail_screen.dart';
 import '../features/buddy/presentation/screens/buddy_discovery_screen.dart';
+import '../features/buddy/presentation/screens/buddy_list_screen.dart'; // NEW
 import '../features/messaging/presentation/screens/conversation_list_screen.dart';
 import '../features/messaging/presentation/screens/chat_screen.dart';
 import '../shared/presentation/widgets/navigation/main_shell.dart';
@@ -73,6 +74,12 @@ final goRouter = GoRouter(
         GoRoute(
           path: '/buddy-discovery',
           builder: (context, state) => const BuddyDiscoveryScreen(),
+          routes: [
+             GoRoute(
+              path: 'list',
+              builder: (context, state) => const BuddyListScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/messages',
