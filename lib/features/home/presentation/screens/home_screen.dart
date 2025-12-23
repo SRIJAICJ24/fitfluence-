@@ -7,60 +7,94 @@ import '../../../../config/theme.dart';
 import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dart';
 import '../widgets/flex_rail.dart';
 import '../widgets/quick_connect_rail.dart';
-import '../widgets/active_grid.dart';
+import '../../../social/presentation/widgets/posts_feed.dart';
+import '../../../../shared/presentation/widgets/navigation/vitality_orb.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileState = ref.watch(profileControllerProvider);
+    // Watch specific profile based on userId (passing null for current user)
+    final profileState = ref.watch(profileControllerProvider(null));
     final firstName = profileState.value?.firstName ?? 'Athlete';
 
     return Scaffold(
-      extendBody: true,
+      extendBody: true, // Allow body to extend behind bottom elements
       body: Stack(
         children: [
           // 1. Ambient Glow Background
           _buildAmbientBackground(),
 
-          // 2. Content ScrollView
-          SafeArea(
-            bottom: false,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // Header
-                SliverPadding(
-                  padding: const EdgeInsets.all(24),
-                  sliver: SliverToBoxAdapter(child: _buildHeader(context, firstName)),
+          // Main Scrollable Content
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // 1. App Bar
+              SliverAppBar(
+                floating: true,
+                backgroundColor: Colors.transparent,
+                title: Text('Good Morning,\n$firstName', 
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(height: 1.1),
                 ),
-
-                // Flex Rail (Stories)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: 24),
-                    child: FlexRail(),
+                actions: [
+                  IconButton(
+                    icon: const GlassContainer(
+                      padding: EdgeInsets.all(8),
+                      borderRadius: 12, // Squared off slightly
+                      child: Icon(Icons.search, color: Colors.white),
+                    ),
+                    onPressed: () => context.push('/gym-search'),
                   ),
-                ),
-
-                // Quick Connect Suggestions
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: 24),
-                    child: QuickConnectRail(),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Stack(
+                      children: [
+                        const GlassContainer(
+                          padding: EdgeInsets.all(8),
+                          borderRadius: 12,
+                          child: Icon(Icons.notifications_none, color: Colors.white),
+                        ),
+                        Positioned(
+                          right: 8, top: 8,
+                          child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.volt, shape: BoxShape.circle)),
+                        ),
+                      ],
+                    ),
+                    onPressed: () => context.push('/notifications'),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                ],
+              ),
 
-                // Active Dashboard Grid
-                const SliverToBoxAdapter(
-                  child: ActiveGrid(),
+              // 2. Flex Rail (Stories) - Skewed!
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: FlexRail(),
                 ),
+              ),
 
-                // Bottom Padding for FAB
-                const SliverToBoxAdapter(child: SizedBox(height: 120)),
-              ],
-            ),
+              // 3. Quick Connect (Buddy Discovery)
+              const SliverToBoxAdapter(
+                child: QuickConnectRail(),
+              ),
+              
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+              // 4. Content Feed
+              const PostsFeed(),
+              
+              const SliverToBoxAdapter(child: SizedBox(height: 100)), // Bottom padding for Orb
+            ],
+          ),
+          
+          // Vitality Orb (Floating Menu) - Restored
+          const Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Center(child: VitalityOrb()),
           ),
         ],
       ),
@@ -134,9 +168,9 @@ class HomeScreen extends ConsumerWidget {
           children: [
              _GlassIconButton(icon: Icons.groups, onTap: () => context.go('/buddy-discovery')), // Squad Finder
              const SizedBox(width: 8),
-             const _GlassIconButton(icon: Icons.search),
+             _GlassIconButton(icon: Icons.search, onTap: () => context.push('/gym-search')),
              const SizedBox(width: 8),
-             const _GlassIconButton(icon: Icons.notifications_none, hasDot: true),
+             _GlassIconButton(icon: Icons.notifications_none, hasDot: true, onTap: () => context.push('/notifications')),
           ],
         ),
       ],

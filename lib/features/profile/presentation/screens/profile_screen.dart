@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dart';
 import '../../../../config/theme.dart';
 import '../controllers/profile_controller.dart';
+import '../widgets/profile_masonry_grid.dart';
+import '../../../social/presentation/widgets/follow_button.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+  final String? userId; // If null, assume current user
+  const ProfileScreen({super.key, this.userId});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -23,8 +27,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    final profileState = ref.watch(profileControllerProvider);
+    // Watch specific profile based on userId
+    final profileState = ref.watch(profileControllerProvider(widget.userId));
     final profile = profileState.value;
+    
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final isMe = widget.userId == null || widget.userId == currentUser?.id;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -51,14 +59,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
                 onPressed: () {},
               ),
               const SizedBox(width: 8),
-              IconButton(
-                icon: const GlassContainer(
-                  padding: EdgeInsets.all(8),
-                  borderRadius: 50,
-                  child: Icon(Icons.settings, color: Colors.white, size: 20),
+              if (isMe)
+                IconButton(
+                  icon: const GlassContainer(
+                    padding: EdgeInsets.all(8),
+                    borderRadius: 50,
+                    child: Icon(Icons.settings, color: Colors.white, size: 20),
+                  ),
+                  onPressed: () {},
+                )
+              else if (widget.userId != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FollowButton(targetUserId: widget.userId!),
                 ),
-                onPressed: () {},
-              ),
+              const SizedBox(width: 8),
               const SizedBox(width: 16),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -206,24 +221,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
             ),
           ),
           
-          // 5. Masonry Grid (Content Feed)
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.7, // Taller items
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  return _buildFeedItem(index);
-                },
-                childCount: 8,
-              ),
-            ),
-          ),
+          // 5. Masonry Grid (Content Feed) - Real Data
+          const ProfileMasonryGrid(),
           
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
@@ -254,57 +253,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
         const SizedBox(height: 8),
         Text(label, style: const TextStyle(color: AppColors.slateGrey, fontSize: 12)),
       ],
-    );
-  }
-
-  Widget _buildFeedItem(int index) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        image: DecorationImage(
-          image: NetworkImage('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&index=$index'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Gradient Overlay
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
-                stops: const [0.7, 1.0],
-              ),
-            ),
-          ),
-          // Like Count
-          const Positioned(
-             bottom: 12,
-             left: 12,
-             child: Row(
-               children: [
-                 Icon(Icons.favorite, color: Colors.white, size: 16),
-                 SizedBox(width: 4),
-                 Text('1.2k', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-               ],
-             ),
-          ),
-          // Video Badge (Randomly)
-          if (index % 3 == 0)
-            Positioned(
-              bottom: 12,
-              right: 12,
-              child: GlassContainer(
-                padding: const EdgeInsets.all(4),
-                borderRadius: 8,
-                child: const Icon(Icons.play_arrow, color: Colors.white, size: 14),
-              ),
-            ),
-        ],
-      ),
     );
   }
 

@@ -13,6 +13,7 @@ class AppColors {
   static const Color indigo = Color(0xFF818CF8); // Brand Glow
   static const Color cyan = Color(0xFF2DD4BF); // Secondary Glow
   static const Color teal = Color(0xFF14B8A6); // Highlights
+  static const Color electricPurple = Color(0xFFA855F7); // Vitality Orb Profile
 
   // Semantic Colors
   static const Color veryOpen = Color(0xFF22C55E);

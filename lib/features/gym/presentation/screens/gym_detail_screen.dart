@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dart';
 import '../../../../config/theme.dart';
 
@@ -142,10 +144,33 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: ElevatedButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Join Request Sent! (Feature coming in Phase 2)')),
-            );
+          onPressed: () async {
+            final userId = Supabase.instance.client.auth.currentUser?.id;
+            if (userId == null) return;
+
+            try {
+              await Supabase.instance.client
+                  .from('profiles')
+                  .update({'gym_id': widget.gymId})
+                  .eq('id', userId);
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Welcome to your new gym! 🏋️‍♂️'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+                // Go home to refresh state
+                context.go('/home');
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error joining: $e'), backgroundColor: AppColors.error),
+                );
+              }
+            }
           }, 
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.volt,

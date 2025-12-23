@@ -8,11 +8,11 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepositoryImpl(Supabase.instance.client);
 });
 
-final profileControllerProvider = StateNotifierProvider<ProfileController, AsyncValue<ProfileModel?>>((ref) {
+final profileControllerProvider = StateNotifierProvider.family.autoDispose<ProfileController, AsyncValue<ProfileModel?>, String?>((ref, userId) {
   final repo = ref.read(profileRepositoryProvider);
-  // Get current user directly from Supabase instance as AuthController might not expose it easily as a property
-  final user = Supabase.instance.client.auth.currentUser;
-  return ProfileController(repo, user?.id);
+  // If userId is provided, use it. Otherwise, use current auth user.
+  final targetId = userId ?? Supabase.instance.client.auth.currentUser?.id;
+  return ProfileController(repo, targetId);
 });
 
 class ProfileController extends StateNotifier<AsyncValue<ProfileModel?>> {

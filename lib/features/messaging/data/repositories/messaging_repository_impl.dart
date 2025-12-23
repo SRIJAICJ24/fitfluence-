@@ -107,4 +107,31 @@ class MessagingRepositoryImpl implements MessagingRepository {
         .order('created_at', ascending: false) // must match order
         .map((maps) => maps.map((json) => MessageModel.fromJson(json)).toList());
   }
+
+  @override
+  Future<String> getOrCreateConversation(String userA, String userB) async {
+    // 1. Check for existing conversation (Order invariant check)
+    final response = await supabase
+        .from('conversations')
+        .select('id')
+        .or('and(user_1_id.eq.$userA,user_2_id.eq.$userB),and(user_1_id.eq.$userB,user_2_id.eq.$userA)')
+        .maybeSingle();
+
+    if (response != null) {
+      return response['id'] as String;
+    }
+
+    // 2. Create new conversation
+    // Note: In a real app we might enforce alphabetical ordering of IDs to avoid dupes,
+    // but the Unique constraint on (user_1_id, user_2_id) handles one direction.
+    // We should strictly try to insert in a consistent order OR handle the error.
+    // For now, simple insert.
+    final newConv = await supabase.from('conversations').insert({
+      'user_1_id': userA,
+      'user_2_id': userB,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).select('id').single();
+
+    return newConv['id'] as String;
+  }
 }

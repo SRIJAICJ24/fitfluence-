@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/buddy_repository.dart';
+import '../../../../features/messaging/domain/repositories/messaging_repository.dart';
+import '../../../../features/messaging/data/repositories/messaging_repository_impl.dart';
 import '../../data/repositories/buddy_repository_impl.dart';
 
 class BuddyListState {
@@ -13,9 +15,10 @@ class BuddyListState {
 
 class BuddyListController extends StateNotifier<BuddyListState> {
   final BuddyRepository _repository;
+  final MessagingRepository _messagingRepository;
   final SupabaseClient _supabase;
 
-  BuddyListController(this._repository, this._supabase) : super(BuddyListState()) {
+  BuddyListController(this._repository, this._messagingRepository, this._supabase) : super(BuddyListState()) {
     loadData();
   }
 
@@ -50,11 +53,23 @@ class BuddyListController extends StateNotifier<BuddyListState> {
       // Handle error
     }
   }
+
+  Future<String?> startChat(String otherUserId) async {
+    final myId = _supabase.auth.currentUser?.id;
+    if (myId == null) return null;
+
+    try {
+      return await _messagingRepository.getOrCreateConversation(myId, otherUserId);
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 final buddyListProvider = StateNotifierProvider<BuddyListController, BuddyListState>((ref) {
   return BuddyListController(
     ref.watch(buddyRepositoryProvider),
+    ref.watch(messagingRepositoryProvider),
     Supabase.instance.client,
   );
 });

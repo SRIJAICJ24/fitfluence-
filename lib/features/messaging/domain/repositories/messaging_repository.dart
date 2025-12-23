@@ -20,4 +20,7 @@ abstract class MessagingRepository {
 
   /// Subscribes to new messages for a specific conversation.
   Stream<List<MessageModel>> subscribeToConversation(String conversationId);
+
+  /// Gets an existing conversation ID or creates a new one.
+  Future<String> getOrCreateConversation(String userA, String userB);
 }

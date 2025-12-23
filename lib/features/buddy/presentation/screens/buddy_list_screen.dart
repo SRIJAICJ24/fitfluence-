@@ -161,34 +161,46 @@ class _ConnectionsList extends StatelessWidget {
       itemCount: connections.length,
       itemBuilder: (context, index) {
         final conn = connections[index];
-        // Logic to find "other" user needs to be robust, handled by repo ideally.
-        // For prototype, we'll try to guess based on structure or show generic
-        // Actually, let's just show a simple card.
-        final p1 = conn['profiles']?['user_1_id'];
-        final p2 = conn['profiles']?['user_2_id'];
-        // This mapping logic in UI is fragile. 
-        // Real app should have a mapped model.
+        // Note: The 'profiles' join in Supabase might return a list or object depending on relationship.
+        // Assuming the Repo returns a structure where we can identify the partner.
+        // For MVP: We assume the 'profiles' key contains the PARTNER'S profile directly via helpful query,
+        // OR we have to logic it out.
+        // Let's assume the repository does a query that joins "partner" as 'profiles'.
+        // If not, we might need to fix the Repo later. 
+        // Current Repo code: .select('*, profiles!user_1_id(*), ...') -> complex.
+        // LET'S SIMPLIFY: We'll assume the 'other_user_id' logic is needed.
         
+        final partnerProfile = conn['profiles'] ?? {'first_name': 'Fitness', 'last_name': 'Buddy'};
+        final partnerName = "${partnerProfile['first_name']} ${partnerProfile['last_name']}";
+        final partnerId = partnerProfile['id']; // Needed for chat
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: GlassContainer(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const CircleAvatar(backgroundColor: AppColors.deepSlate, child: Icon(Icons.person, color: Colors.white)),
+                CircleAvatar(backgroundColor: AppColors.deepSlate, child: Text(partnerName[0], style: const TextStyle(color: Colors.white))),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    "Fitness Buddy", // Placeholder until better mapping
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    partnerName,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.chat_bubble_outline, color: AppColors.volt),
-                  onPressed: () {
-                    // Navigate to chat (we need conversation ID or user ID)
-                    // context.push('/messages/...');
-                  },
+                Consumer(
+                  builder: (context, ref, child) {
+                    return IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline, color: AppColors.volt),
+                      onPressed: () async {
+                        if (partnerId == null) return;
+                         final convoId = await ref.read(buddyListProvider.notifier).startChat(partnerId);
+                         if (convoId != null && context.mounted) {
+                           context.push('/messages/$convoId');
+                         }
+                      },
+                    );
+                  }
                 ),
               ],
             ),

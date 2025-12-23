@@ -16,6 +16,8 @@ import '../features/messaging/presentation/screens/conversation_list_screen.dart
 import '../features/messaging/presentation/screens/chat_screen.dart';
 import '../shared/presentation/widgets/navigation/main_shell.dart';
 import '../features/home/presentation/screens/home_screen.dart';
+import '../features/notifications/presentation/screens/notifications_screen.dart';
+import '../features/social/presentation/screens/pulse_feed_screen.dart';
 
 final goRouter = GoRouter(
   initialLocation: '/home', // Optimistic default
@@ -101,6 +103,14 @@ final goRouter = GoRouter(
         GoRoute(
           path: '/profile/edit',
           builder: (context, state) => const ProfileEditScreen(),
+        ),
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/pulses',
+          builder: (context, state) => const PulseFeedScreen(),
         ),
       ],
     ),

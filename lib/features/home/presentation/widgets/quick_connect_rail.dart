@@ -37,7 +37,7 @@ class _HolographicMiniCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=users${index + 5}'),
+            backgroundImage: NetworkImage('https://ui-avatars.com/api/?name=User+${index + 5}&background=random'),
           ),
           const SizedBox(width: 8),
           Expanded(
