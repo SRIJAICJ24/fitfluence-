@@ -6,6 +6,9 @@ import '../controllers/profile_controller.dart';
 import '../widgets/profile_masonry_grid.dart';
 import '../../../social/presentation/widgets/follow_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
+import '../../monetization/data/repositories/subscription_repository.dart';
+import '../../monetization/domain/models/subscription_model.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String? userId; // If null, assume current user
@@ -30,6 +33,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
     // Watch specific profile based on userId
     final profileState = ref.watch(profileControllerProvider(widget.userId));
     final profile = profileState.value;
+    final subscriptionState = ref.watch(userSubscriptionProvider);
+    final subscription = subscriptionState.value;
+    final isPro = subscription?.isPro ?? false;
     
     final currentUser = Supabase.instance.client.auth.currentUser;
     final isMe = widget.userId == null || widget.userId == currentUser?.id;
@@ -137,6 +143,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white)
                        ),
                        const SizedBox(width: 8),
+                       if (isPro)
                        Container(
                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                          decoration: BoxDecoration(
@@ -194,6 +201,78 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
                       ],
                     ),
                   ),
+                  
+
+
+                  // Upsell Banner for Free Users (Only visible to current user)
+                  if (isMe && !isPro)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
+                      child: GestureDetector(
+                        onTap: () => context.push('/paywall'),
+                        child: GlassContainer(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          borderRadius: 16,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.star, color: Colors.amber, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Upgrade to Pro', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    Text('Unlock analytics & more', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (isMe && isPro)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
+                      child: GestureDetector(
+                        onTap: () => context.push('/analytics'),
+                        child: GlassContainer(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          borderRadius: 16,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.volt.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.insights, color: AppColors.volt, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Pro Insights', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    Text('View your reach & engagement', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   
                   const SizedBox(height: 32),
 

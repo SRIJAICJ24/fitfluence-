@@ -5,6 +5,9 @@ import '../../../../config/theme.dart';
 import '../../domain/entities/post.dart';
 import 'prismatic_border.dart';
 import '../controllers/posts_controller.dart';
+import '../../monetization/data/repositories/subscription_repository.dart';
+import 'package:go_router/go_router.dart';
+import 'dart:ui';
 
 class PostCard extends ConsumerWidget {
   final Post post;
@@ -14,6 +17,11 @@ class PostCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final subscriptionState = ref.watch(userSubscriptionProvider);
+    final isPro = subscriptionState.value?.isPro ?? false;
+    final isPremiumContent = post.caption?.toLowerCase().contains('#pro') ?? false;
+    final isLocked = isPremiumContent && !isPro;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: PrismaticBorder(
@@ -67,11 +75,43 @@ class PostCard extends ConsumerWidget {
             ),
             
             // Media Carousel (Simplified for MVP as single image or first of list)
+            // Media Carousel (Simplified for MVP as single image or first of list)
             AspectRatio(
               aspectRatio: 1.0, // Square posts
-              child: post.mediaUrls.isNotEmpty 
-                  ? Image.network(post.mediaUrls.first, fit: BoxFit.cover)
-                  : Container(color: Colors.grey[900], child: const Icon(Icons.image, color: Colors.white)),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                   ImageFiltered(
+                    imageFilter: ImageFilter.blur(
+                      sigmaX: isLocked ? 20 : 0, 
+                      sigmaY: isLocked ? 20 : 0
+                    ),
+                    child: post.mediaUrls.isNotEmpty 
+                      ? Image.network(post.mediaUrls.first, fit: BoxFit.cover)
+                      : Container(color: Colors.grey[900], child: const Icon(Icons.image, color: Colors.white)),
+                  ),
+                  if (isLocked)
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => context.push('/paywall'),
+                        child: GlassContainer(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          borderRadius: 20,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.lock, color: Colors.amber, size: 32),
+                              const SizedBox(height: 8),
+                              const Text('Pro Content', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              Text('Tap to Unlock', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
 
             // Actions

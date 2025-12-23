@@ -20,6 +20,8 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../features/social/presentation/screens/pulse_feed_screen.dart';
 import '../features/stories/presentation/screens/create_story_screen.dart';
 import '../features/social/presentation/screens/followers_list_screen.dart';
+import '../features/monetization/presentation/screens/paywall_screen.dart';
+import '../features/monetization/presentation/screens/analytics_dashboard_screen.dart';
 
 final goRouter = GoRouter(
   initialLocation: '/home', // Optimistic default
@@ -141,6 +143,14 @@ final goRouter = GoRouter(
     GoRoute(
       path: '/profile/photo-upload',
       builder: (context, state) => const PhotoUploadScreen(),
+    ),
+    GoRoute(
+      path: '/paywall',
+      builder: (context, state) => const PaywallScreen(),
+    ),
+    GoRoute(
+      path: '/analytics',
+      builder: (context, state) => AnalyticsDashboardScreen(userId: Supabase.instance.client.auth.currentUser!.id),
     ),
   ],
 );
