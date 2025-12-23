@@ -199,7 +199,7 @@ class _VitalityOrbState extends State<VitalityOrb> with TickerProviderStateMixin
                         transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
                         child: _isExpanded
                             ? const Icon(Icons.close_rounded, key: ValueKey('close'), color: Colors.white, size: 32)
-                            : const Icon(Icons.favorite_rounded, key: ValueKey('heart'), color: AppColors.volt, size: 32)
+                            : const Icon(Icons.fitness_center_rounded, key: ValueKey('dumbbell'), color: AppColors.volt, size: 32)
                                 .animate(onPlay: (c) => c.repeat(reverse: true))
                                 .scaleXY(begin: 1.0, end: 1.2, duration: 800.ms, curve: Curves.easeInOut)
                                 .effect(duration: 800.ms, curve: Curves.easeInOut),

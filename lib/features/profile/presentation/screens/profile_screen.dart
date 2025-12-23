@@ -186,8 +186,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with TickerProvid
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildVitalityRing('Streak', '14', 0.8, AppColors.indigo),
-                        _buildVitalityRing('PRs', '5', 0.4, AppColors.volt),
+                        // In a real app we'd fetch counts from FollowRepository
+                        // For now, mocking or passing dynamic
+                        _buildVitalityRing('Followers', '128', 0.6, AppColors.indigo), 
+                        _buildVitalityRing('Following', '54', 0.3, AppColors.cyan),
                         _buildVitalityRing('Consistency', '92%', 0.92, AppColors.teal),
                       ],
                     ),

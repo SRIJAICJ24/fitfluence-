@@ -13,6 +13,9 @@ abstract class SocialRepository {
   /// Fetches the main home feed (posts from following + algorithm).
   Future<List<Post>> getHomeFeed(String userId);
 
+  /// Fetches posts only from users the current user follows.
+  Future<List<Post>> getFollowingFeed(String userId);
+
   /// Fetches posts for a specific user profile.
   Future<List<Post>> getUserPosts(String userId);
 
@@ -24,4 +27,8 @@ abstract class SocialRepository {
   Future<void> followUser(String followerId, String targetId);
   Future<void> unfollowUser(String followerId, String targetId);
   Future<bool> isFollowing(String followerId, String targetId);
+
+  // Interaction
+  Future<void> likePost(String userId, String postId);
+  Future<void> unlikePost(String userId, String postId);
 }

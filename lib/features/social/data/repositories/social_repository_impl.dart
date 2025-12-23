@@ -49,11 +49,49 @@ class SocialRepositoryImpl implements SocialRepository {
     
     final response = await _supabase
         .from('posts')
-        .select('*, profiles!user_id(first_name, last_name, avatar_url)')
+        .select('*, profiles!user_id(first_name, last_name, avatar_url), post_likes(user_id)')
         .order('created_at', ascending: false)
         .limit(20);
 
-    return (response as List).map((json) => Post.fromJson(json)).toList();
+    // Map and check if current user liked it
+    return (response as List).map((json) {
+      final likes = json['post_likes'] as List? ?? [];
+      final isLiked = likes.any((like) => like['user_id'] == userId);
+      json['is_liked'] = isLiked; 
+      return Post.fromJson(json);
+    }).toList();
+  }
+
+  @override
+  Future<List<Post>> getFollowingFeed(String userId) async {
+    // 1. Get List of Following IDs
+    final followingResponse = await _supabase
+        .from('followers')
+        .select('following_id')
+        .eq('follower_id', userId);
+    
+    final followingIds = (followingResponse as List).map((e) => e['following_id']).toList();
+    // Include self? Maybe.
+    followingIds.add(userId);
+
+    if (followingIds.isEmpty) return [];
+
+    // 2. Fetch Posts where ID in list
+    final filterString = '(${followingIds.map((id) => '"$id"').join(',')})';
+
+    final response = await _supabase
+        .from('posts')
+        .select('*, profiles!user_id(first_name, last_name, avatar_url), post_likes(user_id)')
+        .filter('user_id', 'in', filterString)
+        .order('created_at', ascending: false)
+        .limit(20);
+
+    return (response as List).map((json) {
+      final likes = json['post_likes'] as List? ?? [];
+      final isLiked = likes.any((like) => like['user_id'] == userId);
+      json['is_liked'] = isLiked; 
+      return Post.fromJson(json);
+    }).toList();
   }
 
   @override
@@ -105,5 +143,22 @@ class SocialRepositoryImpl implements SocialRepository {
         .match({'follower_id': followerId, 'following_id': targetId})
         .maybeSingle();
     return response != null;
+  }
+
+  @override
+  Future<void> likePost(String userId, String postId) async {
+    await _supabase.from('post_likes').insert({
+      'user_id': userId,
+      'post_id': postId,
+    });
+    // Optional: Increment counter on posts table if denormalized
+  }
+
+  @override
+  Future<void> unlikePost(String userId, String postId) async {
+    await _supabase.from('post_likes').delete().match({
+      'user_id': userId,
+      'post_id': postId,
+    });
   }
 }

@@ -19,5 +19,9 @@ abstract class BuddyRepository {
   Future<void> respondToRequest(String requestId, String status);
 
   /// Fetches active connections for [userId].
+  /// Fetches active connections for [userId].
   Future<List<Map<String, dynamic>>> getConnections(String userId);
+
+  /// Ends a connection and saves rating.
+  Future<void> endConnection(String connectionId, int rating, String feedback);
 }

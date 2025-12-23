@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/messaging_repository.dart';
@@ -14,7 +15,6 @@ class MessagingRepositoryImpl implements MessagingRepository {
 
   @override
   Future<List<ConversationModel>> getConversations(String userId) async {
-    // 1. Fetch Conversations
     final response = await supabase
         .from('conversations')
         .select()
@@ -23,29 +23,30 @@ class MessagingRepositoryImpl implements MessagingRepository {
 
     final conversations = (response as List).map((json) => ConversationModel.fromJson(json)).toList();
 
-    // 2. Hydrate "Other User" Profile (N+1 efficient implementation needed normally)
-    // For prototype, simple loop.
     final hydratedConversations = <ConversationModel>[];
-    
     for (var conv in conversations) {
       final otherId = (conv.user1Id == userId) ? conv.user2Id : conv.user1Id;
-      final profile = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, gym_id') // optimized select
-          .eq('id', otherId)
-          .single();
-      
-      hydratedConversations.add(ConversationModel(
-        id: conv.id,
-        user1Id: conv.user1Id,
-        user2Id: conv.user2Id,
-        lastMessageAt: conv.lastMessageAt,
-        lastMessagePreview: conv.lastMessagePreview,
-        updatedAt: conv.updatedAt,
-        otherUserProfile: profile,
-      ));
+      // In production, optimize this fetch
+      try {
+        final profile = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, gym_id, avatar_url')
+            .eq('id', otherId)
+            .single();
+        
+        hydratedConversations.add(ConversationModel(
+          id: conv.id,
+          user1Id: conv.user1Id,
+          user2Id: conv.user2Id,
+          lastMessageAt: conv.lastMessageAt,
+          lastMessagePreview: conv.lastMessagePreview,
+          updatedAt: conv.updatedAt,
+          otherUserProfile: profile,
+        ));
+      } catch (_) {
+        // Skip if profile not found (defensive)
+      }
     }
-
     return hydratedConversations;
   }
 
@@ -55,8 +56,7 @@ class MessagingRepositoryImpl implements MessagingRepository {
         .from('messages')
         .select()
         .eq('conversation_id', conversationId)
-        .order('created_at', ascending: false); // Newest first for chat UI
-
+        .order('created_at', ascending: false);
     return (response as List).map((json) => MessageModel.fromJson(json)).toList();
   }
 
@@ -67,17 +67,14 @@ class MessagingRepositoryImpl implements MessagingRepository {
     required String receiverId,
     required String content,
   }) async {
-    // 1. Insert Message
     final msgResponse = await supabase.from('messages').insert({
       'conversation_id': conversationId,
       'sender_id': senderId,
       'receiver_id': receiverId,
       'content': content,
       'is_read': false,
-      // 'created_at' auto-generated
     }).select().single();
 
-    // 2. Update Conversation Metadata (Last msg preview)
     await supabase.from('conversations').update({
       'last_message_preview': content,
       'last_message_at': DateTime.now().toIso8601String(),
@@ -88,7 +85,6 @@ class MessagingRepositoryImpl implements MessagingRepository {
 
   @override
   Future<void> markAsRead(String conversationId, String userId) async {
-    // Update all messages where receiver is me AND is_read is false
     await supabase.from('messages').update({
       'is_read': true,
       'read_at': DateTime.now().toIso8601String(),
@@ -99,18 +95,16 @@ class MessagingRepositoryImpl implements MessagingRepository {
 
   @override
   Stream<List<MessageModel>> subscribeToConversation(String conversationId) {
-    // Realtime Stream!
     return supabase
         .from('messages')
         .stream(primaryKey: ['id'])
         .eq('conversation_id', conversationId)
-        .order('created_at', ascending: false) // must match order
+        .order('created_at', ascending: false)
         .map((maps) => maps.map((json) => MessageModel.fromJson(json)).toList());
   }
 
   @override
   Future<String> getOrCreateConversation(String userA, String userB) async {
-    // 1. Check for existing conversation (Order invariant check)
     final response = await supabase
         .from('conversations')
         .select('id')
@@ -121,11 +115,6 @@ class MessagingRepositoryImpl implements MessagingRepository {
       return response['id'] as String;
     }
 
-    // 2. Create new conversation
-    // Note: In a real app we might enforce alphabetical ordering of IDs to avoid dupes,
-    // but the Unique constraint on (user_1_id, user_2_id) handles one direction.
-    // We should strictly try to insert in a consistent order OR handle the error.
-    // For now, simple insert.
     final newConv = await supabase.from('conversations').insert({
       'user_1_id': userA,
       'user_2_id': userB,
@@ -133,5 +122,43 @@ class MessagingRepositoryImpl implements MessagingRepository {
     }).select('id').single();
 
     return newConv['id'] as String;
+  }
+
+  @override
+  Future<void> sendTypingStatus(String conversationId, String userId, bool isTyping) async {
+    final channel = supabase.channel('room:$conversationId');
+    await channel.subscribe();
+    await channel.sendBroadcastMessage(
+      event: 'typing',
+      payload: {'user_id': userId, 'is_typing': isTyping},
+    );
+  }
+
+  @override
+  Stream<String> onTypingStatusChanged(String conversationId) {
+    final controller = StreamController<String>();
+    final channel = supabase.channel('room:$conversationId');
+    
+    channel.onBroadcast(event: 'typing', callback: (payload) {
+       final uid = payload['user_id'] as String?;
+       final isTyping = payload['is_typing'] as bool? ?? false;
+       if (uid != null && isTyping) {
+         controller.add(uid);
+       } 
+    }).subscribe();
+
+    return controller.stream;
+  }
+
+  @override
+  Future<List<MessageModel>> searchMessages(String conversationId, String query) async {
+    final response = await supabase
+        .from('messages')
+        .select()
+        .eq('conversation_id', conversationId)
+        .ilike('content', '%$query%')
+        .order('created_at', ascending: false);
+
+    return (response as List).map((json) => MessageModel.fromJson(json)).toList();
   }
 }

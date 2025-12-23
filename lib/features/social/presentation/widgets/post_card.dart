@@ -4,14 +4,16 @@ import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dar
 import '../../../../config/theme.dart';
 import '../../domain/entities/post.dart';
 import 'prismatic_border.dart';
+import '../controllers/posts_controller.dart';
 
-class PostCard extends StatelessWidget {
+class PostCard extends ConsumerWidget {
   final Post post;
+  final int streak; 
 
-  const PostCard({super.key, required this.post});
+  const PostCard({super.key, required this.post, this.streak = 0});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: PrismaticBorder(
@@ -40,6 +42,17 @@ class PostCard extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
+                  // Streak Badge
+                  if (streak > 0)
+                     Padding(
+                       padding: const EdgeInsets.only(right: 8),
+                       child: Row(
+                         children: [
+                           const Icon(Icons.local_fire_department, color: AppColors.volt, size: 16),
+                           Text('$streak', style: const TextStyle(color: AppColors.volt, fontWeight: FontWeight.bold, fontSize: 12)),
+                         ],
+                       ),
+                     ),
                   if (post.isPr)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -66,7 +79,18 @@ class PostCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                   const Icon(Icons.favorite_border, color: Colors.white),
+                   GestureDetector(
+                     onTap: () => ref.read(postsControllerProvider.notifier).toggleLike(post.id),
+                     child: AnimatedSwitcher(
+                       duration: const Duration(milliseconds: 300),
+                       transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                       child: Icon(
+                         post.isLiked ? Icons.favorite : Icons.favorite_border,
+                         key: ValueKey(post.isLiked),
+                         color: post.isLiked ? AppColors.error : Colors.white,
+                       ),
+                     ),
+                   ),
                    const SizedBox(width: 4),
                    Text('${post.likeCount}', style: const TextStyle(color: Colors.white)),
                    const SizedBox(width: 16),

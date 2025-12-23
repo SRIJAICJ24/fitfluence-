@@ -8,7 +8,7 @@ import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dar
 import '../widgets/flex_rail.dart';
 import '../widgets/quick_connect_rail.dart';
 import '../../../social/presentation/widgets/posts_feed.dart';
-import '../../../../shared/presentation/widgets/navigation/vitality_orb.dart';
+
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -90,12 +90,7 @@ class HomeScreen extends ConsumerWidget {
           ),
           
           // Vitality Orb (Floating Menu) - Restored
-          const Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: Center(child: VitalityOrb()),
-          ),
+
         ],
       ),
     );

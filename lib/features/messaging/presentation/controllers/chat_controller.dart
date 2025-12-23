@@ -34,6 +34,16 @@ class ChatController extends StateNotifier<ChatState> {
       state = ChatState(isSending: false);
       // Handle error
     }
+    if (userId != null) {
+      await _repository.markAsRead(conversationId, userId);
+    }
+  }
+
+  Future<void> sendTyping(String conversationId, bool isTyping) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId != null) {
+      await _repository.sendTypingStatus(conversationId, userId, isTyping);
+    }
   }
 }
 
@@ -47,5 +57,20 @@ final chatControllerProvider = StateNotifierProvider<ChatController, ChatState>(
 // Stream Provider for Messages
 final chatStreamProvider = StreamProvider.family.autoDispose((ref, String conversationId) {
   final repo = ref.watch(messagingRepositoryProvider);
+  
+  // Side Effect: Mark as read when stream is active (user is viewing)
+  // We use a fire-and-forget call here carefully.
+  // Ideally, we'd use a useEffect hook in the UI, but here ensures it runs on data fetch.
+  final userId = Supabase.instance.client.auth.currentUser?.id;
+  if (userId != null) {
+      repo.markAsRead(conversationId, userId);
+  }
+  
   return repo.subscribeToConversation(conversationId);
+});
+
+// Stream Provider for Typing Status
+final typingStatusProvider = StreamProvider.family.autoDispose((ref, String conversationId) {
+  final repo = ref.watch(messagingRepositoryProvider);
+  return repo.onTypingStatusChanged(conversationId);
 });

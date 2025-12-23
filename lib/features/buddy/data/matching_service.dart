@@ -45,6 +45,17 @@ class MatchingService {
       // 4. Age (Band) - Max 5 (Simple logic for prototype)
       final ageScore = _calculateAgeScore(user.birthYear, candidate.birthYear);
       totalScore += ageScore;
+      breakdown['age_score'] = ageScore;
+
+      // 5. Time Window (>45m overlap) - Max 15
+      final timeScore = _calculateTimeScore(user, candidate);
+      totalScore += timeScore;
+      breakdown['time_score'] = timeScore;
+
+      // 6. Vibe (Mental Health Comfort) - Max 10 (Part of Age/Vibe bucket)
+      final vibeScore = _calculateVibeScore(user.mentalHealthComfort, candidate.mentalHealthComfort);
+      totalScore += vibeScore;
+      breakdown['vibe_score'] = vibeScore;
 
       // TODO: Time of Day & Vibe (Need more data fields)
 
@@ -117,6 +128,44 @@ class MatchingService {
     final diff = (y1 - y2).abs();
     if (diff <= 5) return 5.0;
     return 0.0;
+  }
+
+  double _calculateVibeScore(String? v1, String? v2) {
+    if (v1 == null || v2 == null) return 0.0;
+    return (v1 == v2) ? 10.0 : 0.0;
+  }
+
+  double _calculateTimeScore(MatchCandidate u1, MatchCandidate u2) {
+    if (u1.availableStartTime == null || u1.availableEndTime == null ||
+        u2.availableStartTime == null || u2.availableEndTime == null) {
+      return 0.0;
+    }
+
+    try {
+      final start1 = _parseTime(u1.availableStartTime!);
+      final end1 = _parseTime(u1.availableEndTime!);
+      final start2 = _parseTime(u2.availableStartTime!);
+      final end2 = _parseTime(u2.availableEndTime!);
+
+      // Calculate Overlap
+      final overlapStart = math.max(start1, start2);
+      final overlapEnd = math.min(end1, end2);
+
+      final overlapMinutes = overlapEnd - overlapStart;
+      
+      if (overlapMinutes >= 45) return 15.0;
+      return 0.0;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
+  // Helper: Convert HH:MM:SS to minutes from midnight
+  int _parseTime(String timeStr) {
+    final parts = timeStr.split(':');
+    final h = int.parse(parts[0]);
+    final m = int.parse(parts[1]);
+    return (h * 60) + m;
   }
 
   Set<String> _getIntersection(List<String> a, List<String> b) {

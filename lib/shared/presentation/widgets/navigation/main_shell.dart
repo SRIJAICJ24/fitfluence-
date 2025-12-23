@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'liquid_orb_nav.dart';
+
+
+import 'vitality_orb.dart';
 
 class MainShell extends StatelessWidget {
   final Widget child;
@@ -16,13 +18,14 @@ class MainShell extends StatelessWidget {
           // Main content
           child,
 
-          // Floating Orb Navigation
+          // Floating Orb Navigation (Restored)
           const Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: Center(child: LiquidOrbNav()),
+            child: Center(child: VitalityOrb()),
           ),
+
         ],
       ),
     );

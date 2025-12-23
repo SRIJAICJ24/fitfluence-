@@ -23,4 +23,14 @@ abstract class MessagingRepository {
 
   /// Gets an existing conversation ID or creates a new one.
   Future<String> getOrCreateConversation(String userA, String userB);
+
+  /// Emits a typing event (isTyping: true/false) to the conversation room.
+  Future<void> sendTypingStatus(String conversationId, String userId, bool isTyping);
+
+  /// Listens for typing events in a conversation.
+  /// Returns a Stream of UserIDs who are currently typing.
+  Stream<String> onTypingStatusChanged(String conversationId);
+
+  /// Searches messages in a conversation using case-insensitive match.
+  Future<List<MessageModel>> searchMessages(String conversationId, String query);
 }

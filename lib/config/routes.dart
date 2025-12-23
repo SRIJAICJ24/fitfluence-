@@ -18,6 +18,8 @@ import '../shared/presentation/widgets/navigation/main_shell.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/social/presentation/screens/pulse_feed_screen.dart';
+import '../features/stories/presentation/screens/create_story_screen.dart';
+import '../features/social/presentation/screens/followers_list_screen.dart';
 
 final goRouter = GoRouter(
   initialLocation: '/home', // Optimistic default
@@ -112,7 +114,27 @@ final goRouter = GoRouter(
           path: '/pulses',
           builder: (context, state) => const PulseFeedScreen(),
         ),
+        GoRoute(
+          path: '/create-story',
+          builder: (context, state) => const CreateStoryScreen(),
+        ),
       ],
+    ),
+    
+    // Followers List (Standalone or stacked)
+    GoRoute(
+      path: '/profile/followers/:userId',
+      builder: (context, state) {
+         final userId = state.pathParameters['userId']!;
+         return FollowersListScreen(userId: userId, initialTabIndex: 0); 
+      },
+    ),
+    GoRoute(
+      path: '/profile/following/:userId',
+      builder: (context, state) {
+         final userId = state.pathParameters['userId']!;
+         return FollowersListScreen(userId: userId, initialTabIndex: 1); 
+      },
     ),
 
     // --- Standalone Routes (Modal/Fullscreen) ---

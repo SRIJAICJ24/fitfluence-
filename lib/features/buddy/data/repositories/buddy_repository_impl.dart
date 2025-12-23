@@ -32,23 +32,44 @@ class BuddyRepositoryImpl implements BuddyRepository {
       
       final currentUser = MatchCandidate.fromJson(userResponse);
 
-      // 2. Fetch Potential Candidates (Same Gym Optimization)
+      // 2. Fetch Blocked Users (Safety Filter)
+      final blocksResponse = await supabase
+          .from('user_blocks')
+          .select()
+          .or('blocker_id.eq.$userId,blocked_user_id.eq.$userId');
+      
+      final Set<String> blockedIds = {};
+      for (final block in blocksResponse as List) {
+        if (block['blocker_id'] == userId) blockedIds.add(block['blocked_user_id']);
+        if (block['blocked_user_id'] == userId) blockedIds.add(block['blocker_id']);
+      }
+
+      // 3. Fetch Potential Candidates (Same Gym Optimization)
       // We process hard filters in memory (MatchingService) for now, 
       // but filtering by GymID at DB level is a huge performance win.
-      final candidatesResponse = await supabase
+      var query = supabase
           .from('profiles')
           .select()
           .eq('gym_id', currentUser.gymId) 
           .neq('id', currentUser.id); // Exclude self
+      
+      if (blockedIds.isNotEmpty) {
+        // Syntax for 'not in list' in Supabase/Postgrest is tricky with dynamic lists.
+        // Easiest is .not('id', 'in', '("id1","id2")') formatted string.
+        final filterString = '(${blockedIds.map((id) => '"$id"').join(',')})';
+        query = query.not('id', 'in', filterString); 
+      }
+
+      final candidatesResponse = await query;
 
       final candidates = (candidatesResponse as List)
           .map((json) => MatchCandidate.fromJson(json))
           .toList();
 
-      // 3. Run Algorithm (The "Brain")
+      // 4. Run Algorithm (The "Brain")
       final results = matchingService.calculateMatches(currentUser, candidates);
 
-      // 4. Cache Results (Bulk Insert/Upsert)
+      // 5. Cache Results (Bulk Insert/Upsert)
       if (results.isNotEmpty) {
         final records = results.map((r) => {
           'user_a_id': userId,
@@ -182,5 +203,18 @@ class BuddyRepositoryImpl implements BuddyRepository {
       // Logic for UI consumption needs robust parsing. For prototype, passing raw map.
       return row; 
     }).toList();
+  }
+
+  @override
+  Future<void> endConnection(String connectionId, int rating, String feedback) async {
+    // 1. Update Connection Status
+    await supabase.from('buddy_connections').update({
+      'status': 'ended', // or archived
+      'ended_at': DateTime.now().toIso8601String(),
+    }).eq('id', connectionId);
+
+    // 2. Log Feedback (Optional table or column)
+    // For MVP, maybe just update a metadata column on the connection
+    // Or insert into 'feedbacks' table if exists.
   }
 }

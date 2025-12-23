@@ -9,6 +9,9 @@ class MatchCandidate extends Equatable {
   final String fitnessLevel; // "Beginner", "Intermediate", "Advanced"
   final DateTime? lastActiveAt;
   final int? birthYear; // For age calculation
+  final String? availableStartTime; // "HH:MM:SS"
+  final String? availableEndTime;
+  final String? mentalHealthComfort;
 
   const MatchCandidate({
     required this.id,
@@ -19,6 +22,9 @@ class MatchCandidate extends Equatable {
     this.fitnessLevel = 'Intermediate',
     this.lastActiveAt,
     this.birthYear,
+    this.availableStartTime,
+    this.availableEndTime,
+    this.mentalHealthComfort,
   });
 
   factory MatchCandidate.fromJson(Map<String, dynamic> json) {
@@ -36,11 +42,14 @@ class MatchCandidate extends Equatable {
       birthYear: json['birth_date'] != null 
           ? DateTime.tryParse(json['birth_date'])?.year 
           : null,
+      availableStartTime: json['available_start_time'],
+      availableEndTime: json['available_end_time'],
+      mentalHealthComfort: json['mental_health_comfort'],
     );
   }
 
   @override
-  List<Object?> get props => [id, gymId, goals, schedule, fitnessLevel];
+  List<Object?> get props => [id, gymId, goals, schedule, fitnessLevel, availableStartTime, availableEndTime, mentalHealthComfort];
 }
 
 class MatchResult extends Equatable {

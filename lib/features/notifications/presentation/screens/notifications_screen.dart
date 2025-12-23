@@ -1,184 +1,139 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:ui';
+import 'package:timeago/timeago.dart' as timeago;
 import '../../../../config/theme.dart';
+import '../../data/repositories/notification_repository.dart';
 import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dart';
-import 'package:go_router/go_router.dart';
-import '../controllers/notifications_controller.dart';
 
-class NotificationsScreen extends ConsumerWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(notificationsProvider);
+  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+}
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          // Ambient Background
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.midnightBlue, AppColors.deepSlate, Colors.black],
-              ),
-            ),
-          ),
-          
-          // Content
-          SafeArea(
-            child: state.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.volt))
-                : state.items.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: state.items.length,
-                        itemBuilder: (context, index) {
-                          return _NotificationTile(item: state.items[index]);
-                        },
-                      ),
-          ),
-        ],
-      ),
-    );
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  List<AppNotification> _notifications = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: GlassContainer(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.notifications_none, size: 48, color: AppColors.slateGrey),
-            SizedBox(height: 16),
-            Text(
-              "No new notifications",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              "We'll let you know when something important happens.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.lightSlate),
-            ),
-          ],
-        ),
+  Future<void> _loadNotifications() async {
+    try {
+      final repo = ref.read(notificationRepositoryProvider);
+      final list = await repo.fetchNotifications();
+      if (mounted) {
+        setState(() {
+          _notifications = list;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.deepSlate,
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        backgroundColor: AppColors.midnightBlue,
       ),
+      body: _isLoading 
+         ? const Center(child: CircularProgressIndicator(color: AppColors.volt))
+         : _notifications.isEmpty
+             ? const Center(child: Text("No notifications yet", style: TextStyle(color: AppColors.slateGrey)))
+             : ListView.separated(
+                 padding: const EdgeInsets.all(16),
+                 itemCount: _notifications.length,
+                 separatorBuilder: (_, __) => const SizedBox(height: 12),
+                 itemBuilder: (context, index) {
+                   return _NotificationTile(notification: _notifications[index]);
+                 },
+               ),
     );
   }
 }
 
 class _NotificationTile extends StatelessWidget {
-  final NotificationItem item;
+  final AppNotification notification;
 
-  const _NotificationTile({required this.item});
+  const _NotificationTile({required this.notification});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
-        onTap: () {
-          if (item.type == NotificationType.buddyRequest) {
-            // Navigate to Buddy Requests tab
-            // Note: Since BuddyListScreen has tabs, we might want to pass a param or just go to the screen.
-            // The TabController in BuddyListScreen defaults to 0 (Requests) anyway if we implemented it right?
-            // Actually usually index 0. Let's check. 
-            // In BuddyListScreen: tabs: [Tab(text: 'Requests'), Tab(text: 'Connections')]
-            // So default is Requests. Perfect.
-            context.push('/buddy-discovery/list'); 
-          }
-        },
-        child: GlassContainer(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              _buildIcon(),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: const TextStyle(
-                        color: AppColors.volt,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.body,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatTime(item.timestamp),
-                      style: const TextStyle(color: AppColors.slateGrey, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              if (item.type == NotificationType.buddyRequest)
-                 const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.lightSlate),
-            ],
+    return GlassContainer(
+      borderRadius: 12,
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundImage: notification.actorAvatar != null ? NetworkImage(notification.actorAvatar!) : null,
+            backgroundColor: AppColors.deepSlate,
+            child: notification.actorAvatar == null ? Text(notification.actorName[0]) : null,
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    children: [
+                      TextSpan(
+                        text: "${notification.actorName} ",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: _getActionText(notification.type)),
+                    ],
+                  ),
+                ),
+                if (notification.message != null && notification.message!.isNotEmpty)
+                   Padding(
+                     padding: const EdgeInsets.only(top: 4),
+                     child: Text(
+                       notification.message!,
+                       style: const TextStyle(color: Colors.white70, fontSize: 13),
+                       maxLines: 2, 
+                       overflow: TextOverflow.ellipsis,
+                     ),
+                   ),
+                const SizedBox(height: 4),
+                Text(
+                  timeago.format(notification.createdAt),
+                  style: const TextStyle(color: AppColors.slateGrey, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          if (notification.type == NotificationType.like || notification.type == NotificationType.comment)
+             Container(
+               width: 40, height: 40,
+               color: Colors.white10, // Placeholder for post thumbnail
+               child: const Icon(Icons.image, size: 16, color: Colors.white30),
+             ),
+          if (notification.type == NotificationType.follow)
+             const Icon(Icons.person_add, color: AppColors.volt, size: 20),
+        ],
       ),
     );
   }
 
-  Widget _buildIcon() {
-    IconData iconData;
-    Color color;
-
-    switch (item.type) {
-      case NotificationType.buddyRequest:
-        iconData = Icons.person_add;
-        color = AppColors.volt;
-        break;
-      case NotificationType.system:
-        iconData = Icons.info;
-        color = Colors.blue;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(iconData, color: color, size: 20),
-    );
-  }
-
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final diff = now.difference(time);
-
-    if (diff.inMinutes < 60) {
-      return "${diff.inMinutes}m ago";
-    } else if (diff.inHours < 24) {
-      return "${diff.inHours}h ago";
-    } else {
-      return "${time.day}/${time.month}";
+  String _getActionText(NotificationType type) {
+    switch (type) {
+      case NotificationType.like: return "liked your post.";
+      case NotificationType.comment: return "commented on your post.";
+      case NotificationType.follow: return "started following you.";
+      case NotificationType.message: return "sent you a message.";
     }
   }
 }

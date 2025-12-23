@@ -11,6 +11,7 @@ class Post extends Equatable {
   final int likeCount;
   final int commentCount;
   final DateTime createdAt;
+  final bool isLiked;
   
   // Joined User Data
   final String? userName;
@@ -29,6 +30,7 @@ class Post extends Equatable {
     required this.createdAt,
     this.userName,
     this.userAvatar,
+    this.isLiked = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -48,9 +50,10 @@ class Post extends Equatable {
       createdAt: DateTime.parse(json['created_at']),
       userName: "${profile['first_name'] ?? ''} ${profile['last_name'] ?? ''}".trim(),
       userAvatar: profile['avatar_url'],
+      isLiked: json['is_liked'] ?? false,
     );
   }
 
   @override
-  List<Object?> get props => [id, userId, mediaUrls, createdAt];
+  List<Object?> get props => [id, userId, mediaUrls, createdAt, isLiked, likeCount];
 }

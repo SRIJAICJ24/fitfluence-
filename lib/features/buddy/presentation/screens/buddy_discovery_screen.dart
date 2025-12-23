@@ -5,6 +5,7 @@ import 'dart:ui';
 import '../../../../config/theme.dart';
 import '../../../../shared/presentation/widgets/glassmorphic/glass_container.dart';
 import '../controllers/buddy_discovery_controller.dart';
+import '../widgets/discovery_filter_drawer.dart';
 
 class BuddyDiscoveryScreen extends ConsumerWidget {
   const BuddyDiscoveryScreen({super.key});
@@ -15,6 +16,7 @@ class BuddyDiscoveryScreen extends ConsumerWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
+      endDrawer: const DiscoveryFilterDrawer(),
       appBar: AppBar(
         title: const Text('Discover Buddies'),
         backgroundColor: Colors.transparent,
@@ -27,7 +29,7 @@ class BuddyDiscoveryScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.filter_list, color: AppColors.volt),
-            onPressed: () {}, // Filter sheet later
+            onPressed: () => Scaffold.of(context).openEndDrawer(),
           ),
         ],
       ),
